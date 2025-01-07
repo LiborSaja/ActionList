@@ -5,7 +5,7 @@ namespace ActionList.DTO {
         public string Title { get; set; }
         public string Content { get; set; }
         [Required]
-        [RegularExpression("open|in progress|finished", ErrorMessage = "Invalid state.")]
+        [RegularExpression("Open|In progress|Finished", ErrorMessage = "Invalid state.")]
         public string State { get; set; }
     }
 }

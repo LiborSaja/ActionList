@@ -1,10 +1,12 @@
 ﻿using ActionList.DTO;
 using ActionList.Filters;
+using ActionList.Model;
 using ActionList.Service;
 using ActionList.Utility;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Reflection.Metadata.Ecma335;
+using System.Threading.Tasks;
 
 namespace ActionList.Controllers {
     [Route("api/[controller]")]
@@ -26,7 +28,7 @@ namespace ActionList.Controllers {
             var taskDto = allTasks.Select(Task => new TodoDto {
                 Id = Task.Id,
                 Title = Task.Title,
-                State = Task.State,
+                State = ((TodoState)Task.State).ToString(),
                 Content = Task.Content,
                 Created = Uuid7Extractor.ExtractCreationTime(Task.Id.ToString())
             }).ToList();
@@ -48,10 +50,28 @@ namespace ActionList.Controllers {
 
         #region Create task method
         [HttpPost]
-        public async Task<IActionResult> CreateTask([FromBody] TodoDto todoDto) {        
-            var createdTask = await _todoService.CreatedTaskAsync(todoDto);
+        public async Task<IActionResult> CreateTask([FromBody] TodoDto todoDto) {
+            // Ověření, zda hodnota odpovídá pouze povoleným hodnotám
+            var allowedStates = Enum.GetNames(typeof(TodoState));
+            if (!allowedStates.Contains(todoDto.State, StringComparer.OrdinalIgnoreCase)) {
+                return BadRequest(new ErrorResponse {
+                    Error = new ErrorDetail {
+                        Code = "400002",
+                        Message = $"Invalid state value: {todoDto.State}",
+                        Details = allowedStates.ToList() // Přidání povolených hodnot
+                    }
+                });
+            }
+
+            // Převedení validního stringu na číselný stav
+            var stateEnum = Enum.Parse<TodoState>(todoDto.State, true);
+
+            // Zavolání servisní metody s validovaným stavem
+            var createdTask = await _todoService.CreatedTaskAsync(todoDto, (int)stateEnum);
             return Ok(createdTask);
         }
+
+
         #endregion
 
         //-------------------------------------------------------------------------------------------------------------------------------- HttpDelete(id)

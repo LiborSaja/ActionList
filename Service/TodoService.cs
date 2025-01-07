@@ -68,11 +68,11 @@ namespace ActionList.Service {
         //-------------------------------------------------------------------------------------------------------------------------------- Create task service
 
         #region Post task method
-        public async Task<Todo> CreatedTaskAsync(TodoDto todoDto) {
+        public async Task<Todo> CreatedTaskAsync(TodoDto todoDto, int state) {
             var todo = new Todo {
-                Id = Uuid7Generator.GenerateUuid7(), 
+                Id = Uuid7Generator.GenerateUuid7(),
                 Title = todoDto.Title,
-                State = todoDto.State.Value,
+                State = state,
                 Content = todoDto.Content
             };
 
@@ -94,6 +94,7 @@ namespace ActionList.Service {
 
             return todo;
         }
+
         #endregion
 
         //--------------------------------------------------------------------------------------------------------------------------------- DeleteById service
