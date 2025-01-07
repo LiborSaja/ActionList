@@ -23,11 +23,23 @@ namespace ActionList.Controllers {
 
         #region Get all tasks method
         [HttpGet]
-        public async Task<IActionResult> GetAllTasks() {
-            var allTasks = await _todoService.GetAllTasksAsync();
+        public async Task<IActionResult> GetTasks([FromQuery] string state = "all") {
+            // Povolené hodnoty pro filtr
+            var validStates = new[] { "all", "open", "inprogress", "finished" };
+            if (!validStates.Contains(state, StringComparer.OrdinalIgnoreCase)) {
+                return BadRequest(new ErrorResponse {
+                    Error = new ErrorDetail {
+                        Code = "400003",
+                        Message = $"Invalid state value: {state}. Valid values are: {string.Join(", ", validStates)}."
+                    }
+                });
+            }
+
+            // Zavolej službu s filtrováním podle stavu
+            var filteredTasks = await _todoService.GetTasksByStateAsync(state.ToLower());
 
             // Pokud nejsou žádné záznamy, vrátíme zprávu
-            if (allTasks == null) {
+            if (filteredTasks == null || !filteredTasks.Any()) {
                 return NotFound(new ErrorResponse {
                     Error = new ErrorDetail {
                         Code = "404002",
@@ -36,7 +48,8 @@ namespace ActionList.Controllers {
                 });
             }
 
-            var taskDto = allTasks.Select(task => new TodoDto {
+            // Převod na DTO
+            var taskDto = filteredTasks.Select(task => new TodoDto {
                 Id = task.Id,
                 Title = task.Title,
                 State = ((TodoState)task.State).ToString(),
@@ -46,6 +59,7 @@ namespace ActionList.Controllers {
 
             return Ok(taskDto);
         }
+
 
         #endregion
 

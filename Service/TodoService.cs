@@ -15,10 +15,16 @@ namespace ActionList.Service {
         //----------------------------------------------------------------------------------------------------------------------------- Get all tasks service
 
         #region Get all tasks method
-        public async Task<List<Todo>> GetAllTasksAsync() {
+        public async Task<List<Todo>> GetTasksByStateAsync(string state) {
             using (var connection = _databaseService.CreateConnection()) {
                 using (var command = connection.CreateCommand()) {
-                    command.CommandText = "SELECT Id, Title, State, Content FROM todo";
+                    // SQL dotaz na základě stavu
+                    command.CommandText = state switch {
+                        "open" => "SELECT Id, Title, State, Content FROM todo WHERE State = 1;",
+                        "inprogress" => "SELECT Id, Title, State, Content FROM todo WHERE State = 2;",
+                        "finished" => "SELECT Id, Title, State, Content FROM todo WHERE State = 3;",
+                        _ => "SELECT Id, Title, State, Content FROM todo;" 
+                    };
 
                     using (var reader = await command.ExecuteReaderAsync()) {
                         var todos = new List<Todo>();
@@ -31,12 +37,12 @@ namespace ActionList.Service {
                             });
                         }
 
-                        // Pokud nejsou žádné záznamy, vrátíme null (nebo prázdný seznam, pokud preferuješ)
-                        return todos.Any() ? todos : null;
+                        return todos;
                     }
                 }
             }
         }
+
 
         #endregion
 
