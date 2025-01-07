@@ -118,11 +118,6 @@ namespace ActionList.Service {
 
         #region Update task properties method
         public async Task<Todo> UpdateTaskAsync(Guid id, TodoUpdateDto todoUpdateDto) {
-            var validStates = new[] { "open", "in progress", "finished" };
-            if (!validStates.Contains(todoUpdateDto.State)) {
-                throw new ArgumentException($"Invalid state: {todoUpdateDto.State}");
-            }
-
             using (var connection = _databaseService.CreateConnection()) {
                 using (var command = connection.CreateCommand()) {
                     command.CommandText = @"
@@ -135,12 +130,7 @@ namespace ActionList.Service {
                     command.Parameters.AddWithValue("@Id", id);
                     command.Parameters.AddWithValue("@Title", todoUpdateDto.Title ?? (object)DBNull.Value);
                     command.Parameters.AddWithValue("@Content", todoUpdateDto.Content ?? (object)DBNull.Value);
-                    command.Parameters.AddWithValue("@State", todoUpdateDto.State switch {
-                        "open" => 0,
-                        "in progress" => 1,
-                        "finished" => 2,
-                        _ => throw new ArgumentException($"Invalid state: {todoUpdateDto.State}")
-                    });
+                    command.Parameters.AddWithValue("@State", (int)Enum.Parse<TodoState>(todoUpdateDto.State, true));
 
                     using (var reader = await command.ExecuteReaderAsync()) {
                         if (await reader.ReadAsync()) {
@@ -148,7 +138,7 @@ namespace ActionList.Service {
                                 Id = reader.GetGuid(0),
                                 Title = reader.GetString(1),
                                 State = reader.GetInt32(2),
-                                Content = reader.GetString(3)
+                                Content = reader.IsDBNull(3) ? null : reader.GetString(3)
                             };
                         }
                     }
@@ -157,6 +147,7 @@ namespace ActionList.Service {
 
             return null;
         }
+
 
 
 

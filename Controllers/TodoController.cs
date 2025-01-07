@@ -148,10 +148,34 @@ namespace ActionList.Controllers {
         #region Update task properties method
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateTask(Guid id, [FromBody] TodoUpdateDto todoUpdateDto) {
+            // Seznam chyb
+            var validationErrors = new List<string>();
+
+            // Validace Title
+            if (string.IsNullOrWhiteSpace(todoUpdateDto.Title)) {
+                validationErrors.Add("The 'Title' field is required.");
+            }
+
+            // Validace Content
+            if (string.IsNullOrWhiteSpace(todoUpdateDto.Content)) {
+                validationErrors.Add("The 'Content' field is required.");
+            }
+
+            // Pokud jsou chyby, vrať je
+            if (validationErrors.Any()) {
+                return BadRequest(new ErrorResponse {
+                    Error = new ErrorDetail {
+                        Code = "400001",
+                        Message = "Validation failed.",
+                        Details = validationErrors
+                    }
+                });
+            }
+
+            // Zavolání servisní metody
             var updatedTask = await _todoService.UpdateTaskAsync(id, todoUpdateDto);
             return Ok(updatedTask);
         }
-
 
 
 

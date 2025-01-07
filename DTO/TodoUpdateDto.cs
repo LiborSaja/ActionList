@@ -3,9 +3,7 @@
 namespace ActionList.DTO {
     public class TodoUpdateDto {
         public string Title { get; set; }
-        public string Content { get; set; }
-        [Required]
-        [RegularExpression("Open|In progress|Finished", ErrorMessage = "Invalid state.")]
+        public string Content { get; set; }        
         public string State { get; set; }
     }
 }
