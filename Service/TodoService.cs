@@ -21,22 +21,23 @@ namespace ActionList.Service {
                     command.CommandText = "SELECT Id, Title, State, Content FROM todo";
 
                     using (var reader = await command.ExecuteReaderAsync()) {
-                        // Jednoduché čtení pomocí LINQ na kolekci
                         var todos = new List<Todo>();
                         while (await reader.ReadAsync()) {
                             todos.Add(new Todo {
                                 Id = reader.GetGuid(0),
                                 Title = reader.GetString(1),
                                 State = reader.GetInt32(2),
-                                Content = reader.GetString(3)
+                                Content = reader.IsDBNull(3) ? null : reader.GetString(3)
                             });
                         }
 
-                        return todos;
+                        // Pokud nejsou žádné záznamy, vrátíme null (nebo prázdný seznam, pokud preferuješ)
+                        return todos.Any() ? todos : null;
                     }
                 }
             }
         }
+
         #endregion
 
         //---------------------------------------------------------------------------------------------------------------------------- Get task by id service
