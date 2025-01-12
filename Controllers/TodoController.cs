@@ -1,12 +1,8 @@
 ﻿using ActionList.DTO;
-using ActionList.Filters;
 using ActionList.Model;
 using ActionList.Service;
 using ActionList.Utility;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using System.Reflection.Metadata.Ecma335;
-using System.Threading.Tasks;
 
 namespace ActionList.Controllers {
     [Route("api/[controller]")]
@@ -19,12 +15,12 @@ namespace ActionList.Controllers {
             this._todoService = todoService;
         }
 
-        //------------------------------------------------------------------------------------------------------------------------------------- HttpGet
+        //--------------------------------------------------------------------------------------------------------------------------------- HttpGet - all tasks
 
         #region Get all tasks method
         [HttpGet]
         public async Task<IActionResult> GetTasks([FromQuery] string state = "all") {
-            // Povolené hodnoty pro filtr
+            // povolené hodnoty pro filtr
             var validStates = new[] { "all", "open", "inprogress", "finished" };
             if (!validStates.Contains(state, StringComparer.OrdinalIgnoreCase)) {
                 return BadRequest(new ErrorResponse {
@@ -34,11 +30,9 @@ namespace ActionList.Controllers {
                     }
                 });
             }
-
-            // Zavolej službu s filtrováním podle stavu
             var filteredTasks = await _todoService.GetTasksByStateAsync(state.ToLower());
 
-            // Pokud nejsou žádné záznamy, vrátíme zprávu
+            // pokud nejsou žádné objekty, vrátí strukturovanou zprávu
             if (filteredTasks == null || !filteredTasks.Any()) {
                 return NotFound(new ErrorResponse {
                     Error = new ErrorDetail {
@@ -48,7 +42,7 @@ namespace ActionList.Controllers {
                 });
             }
 
-            // Převod na DTO
+            // mapování základního modelu na model DTO - pro vracení na frontend ve formátu vhodném pro API
             var taskDto = filteredTasks.Select(task => new TodoDto {
                 Id = task.Id,
                 Title = task.Title,
@@ -56,19 +50,18 @@ namespace ActionList.Controllers {
                 Content = task.Content,
                 Created = Uuid7Extractor.ExtractCreationTime(task.Id.ToString())
             }).ToList();
-
             return Ok(taskDto);
         }
 
 
         #endregion
 
-        //---------------------------------------------------------------------------------------------------------------------------------- HttpGet(id)
+        //----------------------------------------------------------------------------------------------------------------------------------------- HttpGet(id)
 
         #region Get task by id method
         [HttpGet("{id}")]
         public async Task<IActionResult> GetTaskById(string id) {
-            // Kontrola platnosti GUID a existence v databázi
+            // kontrola platnosti GUID a existence daného ID v databázi
             if (!Guid.TryParse(id, out var validId) || (await _todoService.GetTaskByIdAsync(validId)) is not Todo taskById) {
                 return NotFound(new ErrorResponse {
                     Error = new ErrorDetail {
@@ -78,7 +71,7 @@ namespace ActionList.Controllers {
                 });
             }
 
-            // Převod na DTO
+            // mapování základního modelu na DTO
             var taskDto = new TodoDto {
                 Id = taskById.Id,
                 Title = taskById.Title,
@@ -86,7 +79,6 @@ namespace ActionList.Controllers {
                 Content = taskById.Content,
                 Created = Uuid7Extractor.ExtractCreationTime(taskById.Id.ToString())
             };
-
             return Ok(taskDto);
         }
 
@@ -94,25 +86,20 @@ namespace ActionList.Controllers {
 
         #endregion
 
-        //------------------------------------------------------------------------------------------------------------------------------------- HttpPost
+        //-------------------------------------------------------------------------------------------------------------------------------------------- HttpPost
 
         #region Create task method
         [HttpPost]
         public async Task<IActionResult> CreateTask([FromBody] TodoDto todoDto) {
-            // Seznam chyb
+            // validace title a content a jejich uložení do kolekce pro přehledné zobrazení
             var validationErrors = new List<string>();
-
-            // Validace Title
             if (string.IsNullOrWhiteSpace(todoDto.Title)) {
                 validationErrors.Add("The 'Title' field is required.");
             }
-
-            // Validace Content
             if (string.IsNullOrWhiteSpace(todoDto.Content)) {
                 validationErrors.Add("The 'Content' field is required.");
             }
-
-            // Pokud jsou chyby, vrať je
+            // pokud některý z inputů nebude vyplněn, vrátí chybu/y 
             if (validationErrors.Any()) {
                 return BadRequest(new ErrorResponse {
                     Error = new ErrorDetail {
@@ -123,7 +110,7 @@ namespace ActionList.Controllers {
                 });
             }
 
-            // Ověření, zda hodnota odpovídá pouze povoleným hodnotám
+            // ověření, zda hodnota odpovídá pouze definovaným hodnotám - defacto zbytečné, když na frontendu je <select>
             var allowedStates = Enum.GetNames(typeof(TodoState));
             if (!allowedStates.Contains(todoDto.State, StringComparer.OrdinalIgnoreCase)) {
                 return BadRequest(new ErrorResponse {
@@ -134,11 +121,10 @@ namespace ActionList.Controllers {
                     }
                 });
             }
-
-            // Převedení validního stringu na číselný stav
+            // převedení validního stringu na číselný stav
             var stateEnum = Enum.Parse<TodoState>(todoDto.State, true);
 
-            // Zavolání servisní metody s validovaným stavem
+            // voláni service
             var createdTask = await _todoService.CreatedTaskAsync(todoDto, (int)stateEnum);
             return Ok(createdTask);
         }
@@ -147,35 +133,32 @@ namespace ActionList.Controllers {
 
         #endregion
 
-        //-------------------------------------------------------------------------------------------------------------------------------- HttpDelete(id)
+        //-------------------------------------------------------------------------------------------------------------------------------------- HttpDelete(id)
 
         #region Delete task by id method
         [HttpDelete("{id}")]
+        // odstranění objektu z DB dle Id
         public async Task<IActionResult> DeleteTaskById(Guid id) {
             var deleteById = await _todoService.DeleteTaskByIdAsync(id);
             return Ok(id);
         }
         #endregion
 
-        //--------------------------------------------------------------------------------------------------------------------------------------- HttpPut
+        //--------------------------------------------------------------------------------------------------------------------------------------------- HttpPut
 
         #region Update task properties method
         [HttpPut("{id}")]
         public async Task<IActionResult> UpdateTask(Guid id, [FromBody] TodoUpdateDto todoUpdateDto) {
-            // Seznam chyb
+            // validace title a content a uložení do kolekce
             var validationErrors = new List<string>();
-
-            // Validace Title
             if (string.IsNullOrWhiteSpace(todoUpdateDto.Title)) {
                 validationErrors.Add("The 'Title' field is required.");
             }
-
-            // Validace Content
             if (string.IsNullOrWhiteSpace(todoUpdateDto.Content)) {
                 validationErrors.Add("The 'Content' field is required.");
             }
 
-            // Pokud jsou chyby, vrať je
+            // pokud některá z vlastností nevyplněna, vrátí strukturovanou zprávu
             if (validationErrors.Any()) {
                 return BadRequest(new ErrorResponse {
                     Error = new ErrorDetail {
@@ -186,13 +169,10 @@ namespace ActionList.Controllers {
                 });
             }
 
-            // Zavolání servisní metody
+            // volání service
             var updatedTask = await _todoService.UpdateTaskAsync(id, todoUpdateDto);
             return Ok(updatedTask);
         }
-
-
-
         #endregion
 
 

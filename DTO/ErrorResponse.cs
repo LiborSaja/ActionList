@@ -1,4 +1,5 @@
 ﻿namespace ActionList.DTO {
+    // model pro sjednocenou strukturu chybových odpovědí API
     public class ErrorResponse {
         public bool IsError { get; set; } = true;
         public ErrorDetail Error { get; set; }

@@ -6,6 +6,7 @@
         public string Content { get; set; }
     }
 
+    // mapování čísel na string
     public enum TodoState {
         Open = 1,
         InProgress = 2,
